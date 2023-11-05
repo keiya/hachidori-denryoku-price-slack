@@ -1,4 +1,6 @@
 import { IncomingWebhook } from "@slack/webhook";
+import * as fs from "fs/promises";
+import * as path from "path";
 
 import { Crawler } from "./lib/crawler";
 import { Chart } from "./lib/chart";
@@ -6,6 +8,38 @@ import { Chart } from "./lib/chart";
 const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL || "";
 
 const webhook = new IncomingWebhook(slackWebhookUrl);
+
+async function appendDayDataToCSV(
+  date: string,
+  chartX: string[],
+  chartY: number[]
+) {
+  // 現在の年を取得
+  const currentYear = new Date().getFullYear();
+  const csvFileName = `${currentYear}.csv`; // CSVファイル名
+  const csvFilePath = path.join(__dirname, csvFileName); // CSVファイルのパス
+
+  try {
+    // CSVファイルの存在確認
+    try {
+      await fs.access(csvFilePath);
+    } catch (error) {
+      // ファイルが存在しない場合はヘッダーとともに新規作成
+      const header = "date," + chartX.join(",") + "\n";
+      await fs.writeFile(csvFilePath, header);
+    }
+
+    // 1日のデータをCSV形式の文字列に変換
+    const dayData = date + "," + chartY.join(",") + "\n";
+
+    // ファイルに1日のデータを追記
+    await fs.appendFile(csvFilePath, dayData);
+
+    console.log(`Data for the day was appended to ${csvFileName}`);
+  } catch (error) {
+    console.error("Error appending data to CSV", error);
+  }
+}
 
 function findCheapestHour(chartX: string[], chartY: number[]) {
   let minPrice = chartY[0];
@@ -38,6 +72,7 @@ function findCheapestHour(chartX: string[], chartY: number[]) {
   const cr = new Crawler();
   await cr.login();
   const [chartX, chartY] = await cr.marketPrice(date);
+  await appendDayDataToCSV(date, chartX, chartY);
 
   // 関数を使用して最安の時間帯を見つける
   const cheapestHour = findCheapestHour(chartX, chartY);
