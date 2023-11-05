@@ -24,7 +24,7 @@ function findCheapestHour(chartX: string[], chartY: number[]) {
 (async () => {
   const today = new Date();
 
-  if (today.getHours() > 13) {
+  if (today.getHours() >= 13) {
     // 13時以降は翌日のデータを取得する
     today.setDate(today.getDate() + 1); // 1日進める
   }
